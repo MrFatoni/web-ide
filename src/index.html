@@ -95,7 +95,7 @@
   <div id="titlebar">
     <div class="dot"></div>
     <span>web-ide</span>
-    <span style="color:var(--accent2);font-size:11px;margin-left:10px" id="root-path"></span>
+    <span style="color:var(--accent2);font-size:11px;margin-left:10px;cursor:pointer" id="root-path" onclick="changeRoot()" title="Click to change root"></span>
     <span style="color:var(--muted);font-size:11px;margin-left:auto" id="current-path"></span>
   </div>
   <div id="main">
@@ -166,9 +166,10 @@ document.addEventListener('keydown', e => {
 });
 
 const urlParams = new URLSearchParams(window.location.search);
-const queryRoot = urlParams.get('root') || '';
+let queryRoot = urlParams.get('root') || '';
 
 async function api(path, opts = {}) {
+  queryRoot = new URLSearchParams(window.location.search).get('root') || '';
   const sep = path.includes('?') ? '&' : '?';
   return fetch(queryRoot ? path + sep + 'root=' + encodeURIComponent(queryRoot) : path, opts);
 }
@@ -343,17 +344,27 @@ document.addEventListener('mousemove', e => {
 });
 document.addEventListener('mouseup', () => { dragging = false; resizer.classList.remove('dragging'); });
 
+async function changeRoot() {
+  const newRoot = prompt('Set new root path:', document.getElementById('root-path').textContent);
+  if (newRoot) {
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('root', newRoot);
+    window.history.pushState({}, '', newUrl);
+    await loadFiles();
+  }
+}
+
 async function newFile() {
   const name = prompt('File name (e.g. foo.ts or src/bar.ts):');
   if (!name) return;
-  await fetch('/api/file', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: name, content: '' }) });
+  await api('/api/file', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: name, content: '' }) });
   loadFiles();
 }
 
 async function newFolder() {
   const name = prompt('Folder name (e.g. components or src/lib):');
   if (!name) return;
-  await fetch('/api/mkdir', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: name }) });
+  await api('/api/mkdir', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: name }) });
   loadFiles();
 }
 
@@ -361,7 +372,7 @@ async function deleteItem() {
   const sel = document.querySelector('.file-item.active');
   if (!sel) { alert('Select a file or folder first'); return; }
   if (!confirm('Delete ' + sel.title + '?')) return;
-  await fetch('/api/file?path=' + encodeURIComponent(sel.title), { method: 'DELETE' });
+  await api('/api/file?path=' + encodeURIComponent(sel.title), { method: 'DELETE' });
   closeTab(sel.title);
   loadFiles();
 }

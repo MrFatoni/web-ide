@@ -1,6 +1,8 @@
 # web-ide
 
 Minimal web IDE — file tree + CodeMirror editor + termx terminal.
+![screenshot](screenshot.png)
+
 
 ## Stack
 - **Runtime**: Bun
